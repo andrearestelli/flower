@@ -13,8 +13,6 @@ import flwr as fl
 import numpy as np
 import math
 
-NUM_CLIENTS = 10
-
 class FlwrClient(fl.client.NumPyClient):
     def __init__(self, model, x_train, y_train) -> None:
         super().__init__()
