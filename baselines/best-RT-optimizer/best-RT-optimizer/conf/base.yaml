@@ -1,0 +1,29 @@
+---
+# this is the config that will be loaded as default by main.py
+# Please follow the provided structure (this will ensuring all baseline follow
+# a similar configuration structure and hence be easy to customise)
+
+num_clients: 15
+num_rounds: 5
+seed: 42
+
+client_resources:
+  num_cpus: 1
+  num_gpus: 0
+
+dataset:
+  dataset: "mnist"
+  num_classes: 10
+
+model:
+  # model config
+
+strategy:
+  _target_: strategy.FedAvgBestRTOptimizer
+  max_local_epochs: 5
+  batch_size: 32
+  fraction_samples: 1.0
+
+client:
+  mean_ips: 100
+  var_ips: 50
