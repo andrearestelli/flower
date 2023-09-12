@@ -1,0 +1,28 @@
+---
+# this is the config that will be loaded as default by main.py
+# Please follow the provided structure (this will ensuring all baseline follow
+# a similar configuration structure and hence be easy to customise)
+
+num_clients: 100 # number of clients
+num_rounds: 5 # number of rounds
+epochs_min: 1 # minimum number of epochs
+epochs_max: 5 # maximum number of epochs
+batch_size_min: 32 # minimum batch size
+batch_size_max: 128 # maximum batch size
+fraction_samples_min: 0.1 # minimum fraction of samples
+fraction_samples_max: 1.0 # maximum fraction of samples
+seed: 42
+
+dataset:
+  dataset: "mnist"
+  num_classes: 10
+
+model:
+  # model config
+
+strategy:
+  _target_: # points to your strategy (either custom or exiting in Flower)
+  # rest of strategy config
+
+client:
+  # client config
