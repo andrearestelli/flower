@@ -2,26 +2,21 @@
 
 It includes processioning the dataset, instantiate strategy, specify how the global
 model is going to be evaluated, etc. At the end, this script saves the results.
-
-This script reproduces results using dynamic selector and static optimizer techniques
 """
-
+# these are the basic packages you'll need here
+# feel free to remove some if aren't needed
 import os
 from typing import Dict, Optional, Tuple
-from models import create_MLP_model, create_CNN_model
 from utils import save_results_as_pickle
-from client import gen_client_fn
-import hydra
 import numpy as np
-import flwr as fl
-from logging import DEBUG, INFO
-from flwr.common.logger import log
+from client_uo import gen_client_fn
+from models import create_MLP_model, create_CNN_model
+import hydra
 from hydra.utils import instantiate
+import flwr as fl
 from omegaconf import DictConfig, OmegaConf
 from hydra.core.hydra_config import HydraConfig
 
-# Make TensorFlow logs less verbose
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 @hydra.main(config_path="conf", config_name="base", version_base=None)
 def main(cfg: DictConfig) -> None:
@@ -43,44 +38,15 @@ def main(cfg: DictConfig) -> None:
     # be a location in the file system, a list of dataloader, a list of ids to extract
     # from a dataset, it's up to you)
 
-    client_fn = gen_client_fn()
+    # 3. Define your clients
+    # Define a function that returns another function that will be used during
+    # simulation to instantiate each individual client
+    client_fn = gen_client_fn((cfg.epochs_min, cfg.epochs_max), 
+                              (cfg.fraction_samples_min, cfg.fraction_samples_max), 
+                              (cfg.batch_size_min, cfg.batch_size_max), 
+                              cfg.num_clients, 
+                              cfg.is_cnn)
 
-    # 4. Define your strategy
-    # pass all relevant argument (including the global dataset used after aggregation,
-    # if needed by your method.)
-    # strategy = instantiate(cfg.strategy, <additional arguments if desired>)
-
-    # Initialize ray_init_args
-    ray_init_args = {
-        "ignore_reinit_error": True,
-        "include_dashboard": False,
-    }
-
-    # get a function that will be used to construct the config that the client's
-    # fit() method will received
-    def get_on_fit_config():
-        def fit_config(server_round: int):
-            """Return training configuration dict for each round.
-
-            Take batch size, local epochs and number of samples of each client from the server config
-            """
-
-            config = {
-                "batch_size": 32,
-                "local_epochs": 1 if server_round < 2 else 2,
-                "num_samples": None,
-            }
-
-            config["batch_size"] = cfg.batch_size
-            config["local_epochs"] = cfg.local_epochs
-            config["num_samples"] = cfg.num_samples
-
-            log(INFO, f"Round {server_round} training config: batch_size={config['batch_size']}, local_epochs={config['local_epochs']}, num_samples={config['num_samples']}")
-
-            return config
-        
-        return fit_config
-    
     def get_evaluate_fn(model):
         """Return an evaluation function for server-side evaluation."""
 
@@ -106,32 +72,31 @@ def main(cfg: DictConfig) -> None:
         server_model = create_CNN_model()
     else:
         server_model = create_MLP_model()
-    
+
     server_model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
-    
-    # instantiate strategy according to config. Here we pass other arguments
-    # that are only defined at run time.
+
+    # 4. Define your strategy
+    # pass all relevant argument (including the global dataset used after aggregation,
+    # if needed by your method.)
+    # Create strategy
     strategy = instantiate(
         cfg.strategy,
-        on_fit_config_fn=get_on_fit_config(),
         evaluate_fn=get_evaluate_fn(server_model)
     )
 
+    # Initialize ray_init_args
+    ray_init_args = {
+        "ignore_reinit_error": True,
+        "include_dashboard": False,
+    }
+
     # 5. Start Simulation
-    # history = fl.simulation.start_simulation(<arguments for simulation>)
-
-    print("Starting simulation")
-
-    # Start simulation
     history = fl.simulation.start_simulation(
         client_fn=client_fn,
         num_clients=cfg.num_clients,
-        config=fl.server.ServerConfig(num_rounds=cfg.num_rounds),
-        client_resources={
-            "num_cpus": cfg.client_resources.num_cpus,
-            "num_gpus": cfg.client_resources.num_gpus,
-        },
-        strategy=strategy,
+        client_resources={"num_cpus": 1},
+        config=fl.server.ServerConfig(cfg.num_rounds),
+        strategy= strategy,
         ray_init_args=ray_init_args,
     )
 
@@ -148,6 +113,7 @@ def main(cfg: DictConfig) -> None:
     # save results as a Python pickle using a file_path
     # the directory created by Hydra for each run
     save_results_as_pickle(history, file_path=save_path, extra_results={})
+
 
 if __name__ == "__main__":
     main()

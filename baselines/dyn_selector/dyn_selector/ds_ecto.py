@@ -2,21 +2,20 @@
 
 It includes processioning the dataset, instantiate strategy, specify how the global
 model is going to be evaluated, etc. At the end, this script saves the results.
-
-This script reproduces results using dynamic selector and static optimizer techniques
 """
-
+# these are the basic packages you'll need here
+# feel free to remove some if aren't needed
 import os
 from typing import Dict, Optional, Tuple
-from models import create_MLP_model, create_CNN_model
+from utils import plot_dloss_from_history
 from utils import save_results_as_pickle
-from client import gen_client_fn
-import hydra
-import numpy as np
+from models import create_MLP_model, create_CNN_model
+from client_ecto import gen_client_fn
 import flwr as fl
-from logging import DEBUG, INFO
-from flwr.common.logger import log
+import numpy as np
+
 from hydra.utils import instantiate
+import hydra
 from omegaconf import DictConfig, OmegaConf
 from hydra.core.hydra_config import HydraConfig
 
@@ -43,43 +42,32 @@ def main(cfg: DictConfig) -> None:
     # be a location in the file system, a list of dataloader, a list of ids to extract
     # from a dataset, it's up to you)
 
-    client_fn = gen_client_fn()
-
-    # 4. Define your strategy
-    # pass all relevant argument (including the global dataset used after aggregation,
-    # if needed by your method.)
-    # strategy = instantiate(cfg.strategy, <additional arguments if desired>)
-
-    # Initialize ray_init_args
-    ray_init_args = {
-        "ignore_reinit_error": True,
-        "include_dashboard": False,
+    # 3. Define your clients
+    # Define a function that returns another function that will be used during
+    # simulation to instantiate each individual client
+    varying_config = {
+        "local_epochs": cfg.local_epochs_varying,
+        "batch_size": cfg.batch_size_varying,
+        "fraction_samples": cfg.fraction_samples_varying,
     }
 
-    # get a function that will be used to construct the config that the client's
-    # fit() method will received
-    def get_on_fit_config():
-        def fit_config(server_round: int):
-            """Return training configuration dict for each round.
+    default_config = {
+        "local_epochs": int(cfg.local_epochs_default),
+        "batch_size": int(cfg.batch_size_default),
+        "fraction_samples": float(cfg.fraction_samples_default),
+    }
 
-            Take batch size, local epochs and number of samples of each client from the server config
-            """
+    if cfg.dataset.dataset == "mnist":
+        total_num_samples = 60000
+    elif cfg.dataset.dataset == "cifar10":
+        total_num_samples = 50000
+    else:
+        print("Dataset not supported, for this baseline to work you need to specify the total number of samples in the dataset.")
+        exit()
 
-            config = {
-                "batch_size": 32,
-                "local_epochs": 1 if server_round < 2 else 2,
-                "num_samples": None,
-            }
+    samples_per_client = total_num_samples / cfg.num_clients
 
-            config["batch_size"] = cfg.batch_size
-            config["local_epochs"] = cfg.local_epochs
-            config["num_samples"] = cfg.num_samples
-
-            log(INFO, f"Round {server_round} training config: batch_size={config['batch_size']}, local_epochs={config['local_epochs']}, num_samples={config['num_samples']}")
-
-            return config
-        
-        return fit_config
+    client_fn = gen_client_fn(cfg.client.mean_ips, cfg.client.var_ips, cfg.num_clients, varying_config, default_config, cfg.comp_time, samples_per_client)
     
     def get_evaluate_fn(model):
         """Return an evaluation function for server-side evaluation."""
@@ -99,39 +87,35 @@ def main(cfg: DictConfig) -> None:
             model.set_weights(parameters)  # Update model with the latest parameters
             loss, accuracy = model.evaluate(x_test, y_test, verbose=2)
             return loss, {"accuracy": accuracy}
-
+        
         return evaluate
-    
+        
     if cfg.is_cnn:
         server_model = create_CNN_model()
     else:
         server_model = create_MLP_model()
     
     server_model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
-    
-    # instantiate strategy according to config. Here we pass other arguments
-    # that are only defined at run time.
+
+    # Create strategy
     strategy = instantiate(
         cfg.strategy,
-        on_fit_config_fn=get_on_fit_config(),
         evaluate_fn=get_evaluate_fn(server_model)
     )
 
+    # Initialize ray_init_args
+    ray_init_args = {
+        "ignore_reinit_error": True,
+        "include_dashboard": False,
+    }
+
     # 5. Start Simulation
-    # history = fl.simulation.start_simulation(<arguments for simulation>)
-
-    print("Starting simulation")
-
-    # Start simulation
     history = fl.simulation.start_simulation(
         client_fn=client_fn,
         num_clients=cfg.num_clients,
-        config=fl.server.ServerConfig(num_rounds=cfg.num_rounds),
-        client_resources={
-            "num_cpus": cfg.client_resources.num_cpus,
-            "num_gpus": cfg.client_resources.num_gpus,
-        },
-        strategy=strategy,
+        client_resources={"num_cpus": 1},
+        config=fl.server.ServerConfig(cfg.num_rounds),
+        strategy= strategy,
         ray_init_args=ray_init_args,
     )
 

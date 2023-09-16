@@ -8,7 +8,6 @@ partitioned, please include all those functions and logic in the
 `dataset_preparation.py` module. You can use all those functions from functions/methods
 defined here of course.
 """
-
 import os
 from typing import Optional, Tuple
 import numpy as np
@@ -16,7 +15,7 @@ import tensorflow as tf
 from omegaconf import DictConfig
 
 
-def load_dataset(cid: str,) -> Tuple[np.ndarray, np.ndarray]:
+def load_dataset(cid: str, is_cnn: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """Loads the dataset from file and returns the train set for a given client.
 
     Parameters
@@ -31,6 +30,9 @@ def load_dataset(cid: str,) -> Tuple[np.ndarray, np.ndarray]:
     """
 
     folder = "mnist"
+    if is_cnn:
+        folder = "cifar10"
+
     loaded_ds = tf.data.experimental.load(
             path=os.path.join(folder, cid), element_spec=None, compression=None, reader_func=None
         )

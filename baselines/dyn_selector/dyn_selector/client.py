@@ -5,8 +5,8 @@ to instantiate your client.
 """
 
 from typing import Callable
+from models import create_CNN_model, create_MLP_model
 from dataset import load_dataset
-from models import create_model
 from omegaconf import DictConfig
 import tensorflow as tf
 import flwr as fl
@@ -58,15 +58,19 @@ class FlwrClient(fl.client.NumPyClient):
         return loss, len(self.x_val), {"accuracy": acc}
 
 
-def gen_client_fn() -> Callable[[str], fl.client.Client]:
+def gen_client_fn(is_cnn: bool = False) -> Callable[[str], fl.client.Client]:
 
     def client_fn(cid: str) -> fl.client.Client:
         # Load model
-        model = create_model()
+        if(is_cnn):
+            model = create_CNN_model()
+        else:
+            model = create_MLP_model()
+        
         model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
 
         # Load data partition (divide MNIST into NUM_CLIENTS distinct partitions)
-        (x_train_cid, y_train_cid) = load_dataset(cid)
+        (x_train_cid, y_train_cid) = load_dataset(cid, is_cnn)
 
         # Create and return client
         return FlwrClient(model, x_train_cid, y_train_cid)
