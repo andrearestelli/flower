@@ -8,6 +8,25 @@ num_rounds: 200
 batch_size: 32
 local_epochs: 5
 fraction_samples: 1.0
+
+epochs_min: 1 # minimum number of epochs
+epochs_max: 5 # maximum number of epochs
+batch_size_min: 32 # minimum batch size
+batch_size_max: 128 # maximum batch size
+fraction_samples_min: 0.1 # minimum fraction of samples
+fraction_samples_max: 0.8 # maximum fraction of samples
+
+local_epochs_default: 2 # number of local epochs
+batch_size_default: 32 # batch size
+fraction_samples_default: 1.0 
+
+# Which parameters to vary, NOTE: only one of these can be True
+local_epochs_varying: False # whether to vary local epochs
+batch_size_varying: False # whether to vary batch size
+fraction_samples_varying: True # whether to vary fraction of samples
+
+comp_time: 30 # computation time in seconds for each client
+
 seed: 42
 alpha: 2
 is_cnn: False
@@ -32,7 +51,8 @@ strategy:
   ck: 3
 
 client:
-  # client config
+  mean_ips: 100
+  var_ips: 50
 
 hydra:
   run:

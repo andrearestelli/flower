@@ -67,7 +67,7 @@ def main(cfg: DictConfig) -> None:
 
     samples_per_client = total_num_samples / cfg.num_clients
 
-    client_fn = gen_client_fn(cfg.client.mean_ips, cfg.client.var_ips, cfg.num_clients, varying_config, default_config, cfg.comp_time, samples_per_client)
+    client_fn = gen_client_fn(cfg.client.mean_ips, cfg.client.var_ips, cfg.num_clients, varying_config, default_config, cfg.comp_time, samples_per_client, cfg.is_cnn)
     
     def get_evaluate_fn(model):
         """Return an evaluation function for server-side evaluation."""
