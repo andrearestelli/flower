@@ -493,7 +493,7 @@ def download_and_preprocess(cfg: DictConfig) -> None:
     dataset = cfg.dataset.dataset
     total_clients = cfg.num_clients
 
-    if dataset in ["fmnist"]:
+    if dataset in ["fmnist", "cifar10"]:
         num_classes = 10
     else:
         num_classes = 20
@@ -506,10 +506,18 @@ def download_and_preprocess(cfg: DictConfig) -> None:
     exist = os.path.exists(folder)
     if not exist:
         os.makedirs(folder)
-    
-    # Load the FMNIST dataset
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.fashion_mnist.load_data()    
 
+    if dataset in ["fmnist"]:
+        # Load the FMNIST dataset
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.fashion_mnist.load_data()
+    elif dataset in ["cifar10"]:
+        # Load the CIFAR10 dataset
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+
+    # Normalize pixel values to [0, 1]
+    x_train = x_train.astype('float32') / 255.0
+    x_test = x_test.astype('float32') / 255.0  
+    
     num_partitions = total_clients
     concentration = cfg.alpha
     seed = cfg.seed if cfg.seed is not None else 42

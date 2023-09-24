@@ -5,6 +5,7 @@ to instantiate your client.
 """
 
 from typing import Callable, Dict
+from models import create_CNN_model
 from models import create_MLP_model
 from dataset import load_dataset
 from flwr.common import Config, Scalar
@@ -48,6 +49,8 @@ class FlwrClient(fl.client.NumPyClient):
             
         fraction_samples = config["fraction_samples"]
 
+        learning_rate = config["learning_rate"]
+
         x_train_selected = self.x_train
         y_train_selected = self.y_train
 
@@ -58,15 +61,19 @@ class FlwrClient(fl.client.NumPyClient):
             x_train_selected = self.x_train[idx]
             y_train_selected = self.y_train[idx]
 
-        print(f"Client training on {len(x_train_selected)} samples, {epochs} epochs, batch size {batch_size}")
+        print(f"Client training on {len(x_train_selected)} samples, {epochs} epochs, batch size {batch_size}, learning rate {learning_rate}")
+
+        # During training, update the learning rate as needed
+        tf.keras.backend.set_value(self.model.optimizer.lr, learning_rate)
 
         self.model.set_weights(parameters)
-        self.model.fit(x_train_selected, y_train_selected, batch_size=batch_size, epochs=epochs, verbose=2)
-        return self.model.get_weights(), len(self.x_train), {}
+
+        history = self.model.fit(x_train_selected, y_train_selected, batch_size=batch_size, epochs=epochs, verbose=2)
+        return self.model.get_weights(), len(self.x_train), {"training_loss": history.history['loss'][-1]}
 
     def evaluate(self, parameters, config):
         self.model.set_weights(parameters)
-        if config["first_phase"]:
+        if "first_phase" in config and config["first_phase"]:
             x_entire = np.concatenate((self.x_train, self.x_val))
             y_entire = np.concatenate((self.y_train, self.y_val))
             if config["is_cpow"] == False:
@@ -86,15 +93,19 @@ class FlwrClient(fl.client.NumPyClient):
         return loss, len(self.x_val), {"accuracy": acc}
 
 
-def gen_client_fn() -> Callable[[str], fl.client.Client]:
+def gen_client_fn(is_cnn: bool = False) -> Callable[[str], fl.client.Client]:
 
     def client_fn(cid: str) -> fl.client.Client:
         # Load model
-        model = create_MLP_model()
+        if(is_cnn):
+            model = create_CNN_model()
+        else:
+            model = create_MLP_model()
+        
         model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
 
         # Load data partition (divide MNIST into NUM_CLIENTS distinct partitions)
-        (x_train_cid, y_train_cid) = load_dataset(cid)
+        (x_train_cid, y_train_cid) = load_dataset(cid, is_cnn)
 
         # Create and return client
         return FlwrClient(model, x_train_cid, y_train_cid)
