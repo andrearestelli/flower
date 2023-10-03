@@ -4,10 +4,10 @@
 # a similar configuration structure and hence be easy to customise)
 
 num_clients: 100
-num_rounds: 100
+num_rounds: 200
 
 batch_size: 32
-local_epochs: 2
+local_epochs: 4
 num_samples: 
 
 epochs_min: 1 # minimum number of epochs
@@ -28,7 +28,7 @@ fraction_samples_varying: True # whether to vary fraction of samples
 
 comp_time: 30 # computation time in seconds for each client
 
-seed: 42
+seed: 39
 alpha: 2
 is_cnn: False
 
@@ -40,8 +40,7 @@ dataset:
   dataset: "mnist"
   num_classes: 10
 
-model:
-  # model config
+optimizer: "so"
 
 strategy:
   _target_: dyn_selector.strategy.FedAvgWithDynamicSelection
@@ -49,9 +48,13 @@ strategy:
   min_evaluate_clients: 1
   min_available_clients: 1
   decay_coefficient: 0.1
-  initial_sampling_rate: 1
+  initial_sampling_rate: 0.5
   # rest of strategy config
 
 client:
   mean_ips: 100
   var_ips: 50
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${optimizer}_${dataset.dataset}_beta${strategy.decay_coefficient}

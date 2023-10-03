@@ -1,15 +1,15 @@
 ---
 title: Towards Understanding Biased Client Selection in Federated Learning
 url: https://proceedings.mlr.press/v151/jee-cho22a.html
-labels: [client selection, dynamic selection, heterogeneous clients] # please add between 4 and 10 single-word (maybe two-words) labels (e.g. "system heterogeneity", "image classification", "asynchronous", "weight sharing", "cross-silo")
-dataset: [FMNIST, CIFAR10] # list of datasets you include in your baseline
+labels: [client selection, dynamic selection, heterogeneous clients]
+dataset: [FMNIST, CIFAR10]
 ---
 
 # Power of Choice
 
 > Note: If you use this baseline in your work, please remember to cite the original authors of the paper as well as the Flower paper.
 
-**Paper:** https://proceedings.mlr.press/v151/jee-cho22a.html
+**Paper:** [proceedings.mlr.press/v151/jee-cho22a.html](https://proceedings.mlr.press/v151/jee-cho22a.html)
 
 **Authors:** Yae Jee Cho, Jianyu Wang, Gauri Joshi
 
@@ -36,15 +36,13 @@ dataset: [FMNIST, CIFAR10] # list of datasets you include in your baseline
 This is the model used by default.
 * A CNN used in the paper on CIFAR10 dataset. To use this model you have to set is_cnn=True in the configuration file base.yaml.
 
-****Dataset:**** This baseline includes two datasets: FMINST and CIFAR10. Both are partitioned by default among 100 clients, creating imbalanced non-iid partitions using Latent Dirichlet Allocation (LDA) without resampling. All the clients have the same number of samples. Parameter `alpha` of the LDA can be set in the `base.yaml` or passed as argument, by default it is set to 2.
+****Dataset:**** This baseline includes two datasets: FMINST (Fashion MNIST) and CIFAR10. Both are partitioned by default among 100 clients, creating imbalanced non-iid partitions using Latent Dirichlet Allocation (LDA) without resampling. All the clients have the same number of samples. Parameter `alpha` of the LDA can be set in the `base.yaml` or passed as argument, by default it is set to 2.
 
 | Dataset | #classes | #partitions | partitioning method | partition settings |
 | :------ | :---: | :---: | :---: | :---: |
-| FMNIST | 10 | 100 | Latent Dirichlet Allocation | All clients with same number of samples |
+| Fashion MNIST | 10 | 100 | Latent Dirichlet Allocation | All clients with same number of samples |
 | CIFAR10 | 10 | 100 | Latent Dirichlet Allocation | All clients with same number of samples |
 
-
-:warning: *_Earlier you listed already the datasets that your baseline uses. Now you should include a breakdown of the details about each of them. Please include information about: how the dataset is partitioned (e.g. LDA with alpha 0.1 as default and all clients have the same number of training examples; or each client gets assigned a different number of samples following a power-law distribution with each client only instances of 2 classes)? if  your dataset is naturally partitioned just state “naturally partitioned”; how many partitions there are (i.e. how many clients)? Please include this an all information relevant about the dataset and its partitioning into a table._*
 
 ****Training Hyperparameters:**** 
 | Hyperparameter | Description | Default Value |
@@ -59,11 +57,6 @@ This is the model used by default.
 
 
 ## Environment Setup
-
-:warning: _The Python environment for all baselines should follow these guidelines in the `EXTENDED_README`. Specify the steps to create and activate your environment. If there are any external system-wide requirements, please include instructions for them too. These instructions should be comprehensive enough so anyone can run them (if non standard, describe them step-by-step)._
-
-
-## Environment Setup
 By default, Poetry will use the Python version in your system. 
 In some settings, you might want to specify a particular version of Python 
 to use inside your Poetry environment. You can do so with `pyenv`. 
@@ -74,15 +67,15 @@ but one easy way is using the automatic installer:
 curl https://pyenv.run | bash
 ```
 You can then install any Python version with `pyenv install <python-version>`
-(e.g. `pyenv install 3.9.0`) and set that version as the one to be used. 
+(e.g. `pyenv install 3.10.6`) and set that version as the one to be used. 
 ```bash
 # cd to your power_of_choice directory (i.e. where the `pyproject.toml` is)
-pyenv install 3.9.0
+pyenv install 3.10.6
 
-pyenv local 3.9.0
+pyenv local 3.10.6
 
 # set that version for poetry
-poetry env use 3.9.0
+poetry env use 3.10.6
 ```
 To build the Python environment as specified in the `pyproject.toml`, use the following commands:
 ```bash
@@ -106,7 +99,7 @@ To generate the partitions for the FMNIST dataset (used in Figure 4 of the paper
 
 ```bash
 # this will generate the datasets using the default settings in the `conf/base.yaml`
-python3 power_of_choice/dataset_preparation.py
+python -m power_of_choice.dataset_preparation
 ```
 
 The generated datasets will be saved in the `fmnist` folder.
@@ -114,13 +107,13 @@ The generated datasets will be saved in the `fmnist` folder.
 If you want to modify the `alpha` parameter used to create the LDA partitions, you can override the parameter:
 
 ```bash
-python3 power_of_choice/dataset_preparation.py alpha=<alpha>
+python -m power_of_choice.dataset_preparation alpha=<alpha>
 ```
 
 To generate partitions of the CIFAR10 dataset (used in Figure 6 of the paper), you can override the parameter:
 
 ```bash
-python3 power_of_choice/dataset_preparation.py dataset.dataset="cifar10"
+python -m power_of_choice.dataset_preparation dataset.dataset="cifar10"
 ```
 
 In this case the generated datasets will be saved in the `cifar10` folder.
@@ -134,49 +127,49 @@ If you have not done it yet, [generate the clients' dataset](#generate-clients-d
 The default configuration for `power_of_choice.main` uses the base version Power of Choice strategy with MLP on FMNIST dataset. It can be run with the following:
 
 ```bash
-python3 power_of_choice/main.py # this will run using the default settings in the `conf/config.yaml`
+python -m power_of_choice.main # this will run using the default settings in the `conf/config.yaml`
 ```
 
 You can override settings directly from the command line in this way:
 
 ```bash
-python3 power_of_choice/main.py num_rounds=100 # will set the number of rounds to 100
+python -m power_of_choice.main num_rounds=100 # will set the number of rounds to 100
 ```
 
 To run using FedAvg:
 ```bash
 # This will use FedAvg as strategy
-python3 power_of_choice/main.py variant="rand" 
+python -m power_of_choice.main variant="rand" 
 ```
 
 To run all the experiments in Figure 4 of the paper, use the following commands:
 ```bash
 # This will use FedAvg as strategy
-python3 power_of_choice/main.py variant="rand" 
+python -m power_of_choice.main variant="rand" 
 
 # This will use base version of Power of Choice with d=6
-python3 power_of_choice/main.py strategy.d=6
+python -m power_of_choice.main strategy.d=6
 
 # This will use base version of Power of Choice with d=9
-python3 power_of_choice/main.py strategy.d=9
+python -m power_of_choice.main strategy.d=9
 
 # This will use base version of Power of Choice with d=12
-python3 power_of_choice/main.py strategy.d=12
+python -m power_of_choice.main strategy.d=12
 ```
 
 To run all the experiments in Figure 6 of the paper, use the following commands:
 ```bash
 # This will use FedAvg as strategy
-python3 power_of_choice/main.py variant="rand" 
+python -m power_of_choice.main variant="rand" 
 
 # This will use base version of Power of Choice with d=6
-python3 power_of_choice/main.py strategy.d=6
+python -m power_of_choice.main strategy.d=6
 
 # This will use base version of Power of Choice with d=9
-python3 power_of_choice/main.py strategy.d=9
+python -m power_of_choice.main strategy.d=9
 
 # This will use base version of Power of Choice with d=12
-python3 power_of_choice/main.py strategy.d=12
+python -m power_of_choice.main strategy.d=12
 ```
 
 ## Expected Results
@@ -195,14 +188,14 @@ In both cases, then run:
 
 ```bash
 # This will run the experiment using FedAvg strategy
-python3 power_of_choice/main.py variant="rand"
+python -m power_of_choice.main variant="rand"
 ```
 
 and
 
 ```bash
 # This will produce 3 consecutive runs, using pow-d strategy with d=6,9,15, respectively
-python3 power_of_choice/main.py --multirun strategy.d=6,9,15
+python -m power_of_choice.main --multirun strategy.d=6,9,15
 ```
 
 ### Figure 6a and 6b
@@ -214,16 +207,16 @@ Then run:
 
 ```bash
 # This will run the experiment using FedAvg strategy
-python3 power_of_choice/main.py dataset.dataset="cifar10" variant="rand" is_cnn=True
+python -m power_of_choice.main dataset.dataset="cifar10" variant="rand" is_cnn=True
 
 # This will run the experiment using pow-d with d=20 and CK=9
-python3 power_of_choice/main.py dataset.dataset="cifar10" variant="base" is_cnn=True strategy.d=20 strategy.ck=9
+python -m power_of_choice.main dataset.dataset="cifar10" variant="base" is_cnn=True strategy.d=20 strategy.ck=9
 
 # This will run the experiment using cpow-d with d=20 and CK=9
-python3 power_of_choice/main.py dataset.dataset="cifar10" variant="cpow" is_cnn=True strategy.d=20 strategy.ck=9
+python -m power_of_choice.main dataset.dataset="cifar10" variant="cpow" is_cnn=True strategy.d=20 strategy.ck=9
 
 # This will run the experiment using rpow-d with d=60 and CK=9
-python3 power_of_choice/main.py dataset.dataset="cifar10" variant="rpow" is_cnn=True strategy.d=60 strategy.ck=9
+python -m power_of_choice.main dataset.dataset="cifar10" variant="rpow" is_cnn=True strategy.d=60 strategy.ck=9
 ```
 
 To reproduce the results in Figure 6b, [generate the clients' dataset](#generate-clients-dataset) with parameters `dataset.dataset="cifar10"` and  `alpha=0.3`.
@@ -232,27 +225,26 @@ Then run:
 
 ```bash
 # This will run the experiment using FedAvg strategy
-python3 power_of_choice/main.py variant="rand" is_cnn=True
+python -m power_of_choice.main dataset.dataset="cifar10" variant="rand" is_cnn=True
 
 # This will run the experiment using pow-d with d=12 and CK=9
-python3 power_of_choice/main.py variant="base" is_cnn=True strategy.d=12 strategy.ck=9
+python -m power_of_choice.main dataset.dataset="cifar10" variant="base" is_cnn=True strategy.d=12 strategy.ck=9
 
 # This will run the experiment using cpow-d with d=12 and CK=9
-python3 power_of_choice/main.py variant="cpow" is_cnn=True strategy.d=12 strategy.ck=9
+python -m power_of_choice.main dataset.dataset="cifar10" variant="cpow" is_cnn=True strategy.d=12 strategy.ck=9
 
 # This will run the experiment using rpow-d with d=60 and CK=9
-python3 power_of_choice/main.py variant="rpow" is_cnn=True strategy.d=60 strategy.ck=9
+python -m power_of_choice.main dataset.dataset="cifar10" variant="rpow" is_cnn=True strategy.d=60 strategy.ck=9
 ```
 
-:warning: _Your baseline implementation should replicate several of the experiments in the original paper. Please include here the exact command(s) needed to run each of those experiments followed by a figure (e.g. a line plot) or table showing the results you obtained when you ran the code. Below is an example of how you can present this. Please add command followed by results for all your experiments._
+The above commands would generate results by creating a directory under the following path `outputs/<date>/<dataset_name>_${variant}_d${strategy.d}_CK${strategy.ck}`, containing a `results.pkl` file that you can plot by using the following command:
 
 ```bash
-# it is likely that for one experiment you need to sweep over different hyperparameters. You are encouraged to use Hydra's multirun functionality for this. This is an example of how you could achieve this for some typical FL hyperparameteres
-
-poetry run -m <baseline-name>.main --multirun num_client_per_round=5,10,50 dataset=femnist,cifar10
-# the above command will run a total of 6 individual experiments (because 3client_configs x 2datasets = 6 -- you can think of it as a grid).
-
-[Now show a figure/table displaying the results of the above command]
-
-# add more commands + plots for additional experiments.
+# This will plot a set of results in the same figure. 
+python -m power_of_choice.plot_from_pickle --metrics-type="paper_metrics" <paths_to_results>
 ```
+
+The resulting plots should look similar to the one below (reproducing Figure 6a of the paper).
+
+![](_static/Figure_6a.png)
+
