@@ -6,7 +6,8 @@ model is going to be evaluated, etc. At the end, this script saves the results.
 # these are the basic packages you'll need here
 # feel free to remove some if aren't needed
 import os
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
+from flwr.common.typing import Metrics
 from utils import save_results_as_pickle
 import numpy as np
 from client_uo import gen_client_fn
@@ -46,6 +47,31 @@ def main(cfg: DictConfig) -> None:
                               (cfg.batch_size_min, cfg.batch_size_max), 
                               cfg.num_clients, 
                               cfg.is_cnn)
+    
+    def get_fit_metrics_aggregation_fn():
+        def fit_metrics_aggregation_fn(results: List[Tuple[int, Metrics]]) -> Metrics:
+            # Initialize lists to store training losses
+            training_losses = []
+
+            # Extract training losses and client counts from results
+            for _, metrics in results:
+                if "training_loss" in metrics:
+                    training_loss = metrics["training_loss"]
+                    training_losses.append(training_loss)
+
+            # Calculate the variance and average of training loss
+            variance_training_loss = np.var(training_losses)
+            average_training_loss = np.mean(training_losses)
+
+            # Create the aggregated metrics dictionary
+            aggregated_metrics = {
+                "variance_training_loss": variance_training_loss,
+                "average_training_loss": average_training_loss,
+            }
+
+            return aggregated_metrics
+
+        return fit_metrics_aggregation_fn
 
     def get_evaluate_fn(model):
         """Return an evaluation function for server-side evaluation."""
@@ -81,7 +107,8 @@ def main(cfg: DictConfig) -> None:
     # Create strategy
     strategy = instantiate(
         cfg.strategy,
-        evaluate_fn=get_evaluate_fn(server_model)
+        evaluate_fn=get_evaluate_fn(server_model),
+        fit_metrics_aggregation_fn=get_fit_metrics_aggregation_fn(),
     )
 
     # Initialize ray_init_args

@@ -249,6 +249,17 @@ def plot_metrics_from_histories(
     ax2.set_ylabel("Training loss")
     ax2.legend()
 
+    # Add gridlines
+    ax1.grid(True)
+    ax2.grid(True)
+
+    # Increase text size
+    ax1.tick_params(axis='both', which='major', labelsize=14)
+    ax2.tick_params(axis='both', which='major', labelsize=14)
+
+    # Add a title to the figure
+    fig.suptitle("Metrics from Histories", fontsize=16)
+
     # Adjust layout to avoid overlapping labels and titles
     plt.tight_layout()
 
@@ -296,6 +307,15 @@ def plot_variances_training_loss_from_history(
     plt.xlabel("Communication round")
     plt.ylabel("Training loss variance")
     plt.legend()
+
+    # Add gridlines
+    plt.grid(True)
+
+    # Increase text size
+    plt.tick_params(axis='both', which='major', labelsize=14)
+
+    # Add a title to the figure
+    plt.title("Training Loss Variance from History", fontsize=16)
 
     plt.savefig(Path(save_plot_path) / Path(f"Plot_loss_variance{suffix}.png"))
     plt.close()

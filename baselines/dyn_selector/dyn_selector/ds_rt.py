@@ -2,23 +2,20 @@
 
 It includes processioning the dataset, instantiate strategy, specify how the global
 model is going to be evaluated, etc. At the end, this script saves the results.
-
-This script reproduces results using dynamic selector and static optimizer techniques
 """
-
+# these are the basic packages you'll need here
+# feel free to remove some if aren't needed
 import os
 from typing import Dict, List, Optional, Tuple
-from models import create_MLP_model, create_CNN_model
-from flwr.common.typing import Metrics
 from utils import save_results_as_pickle
-from client import gen_client_fn
+from models import create_CNN_model, create_MLP_model
+from client_rt import gen_client_fn
 import hydra
 import numpy as np
 import flwr as fl
-from logging import DEBUG, INFO
-from flwr.common.logger import log
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
+from flwr.common.typing import Metrics
 from hydra.core.hydra_config import HydraConfig
 
 # Make TensorFlow logs less verbose
@@ -44,7 +41,7 @@ def main(cfg: DictConfig) -> None:
     # be a location in the file system, a list of dataloader, a list of ids to extract
     # from a dataset, it's up to you)
 
-    client_fn = gen_client_fn(cfg.is_cnn)
+    client_fn = gen_client_fn(cfg.client.mean_ips, cfg.client.var_ips, cfg.num_clients, cfg.is_cnn)
 
     # 4. Define your strategy
     # pass all relevant argument (including the global dataset used after aggregation,
@@ -57,31 +54,6 @@ def main(cfg: DictConfig) -> None:
         "include_dashboard": False,
     }
 
-    # get a function that will be used to construct the config that the client's
-    # fit() method will received
-    def get_on_fit_config():
-        def fit_config(server_round: int):
-            """Return training configuration dict for each round.
-
-            Take batch size, local epochs and number of samples of each client from the server config
-            """
-
-            config = {
-                "batch_size": 32,
-                "local_epochs": 1 if server_round < 2 else 2,
-                "num_samples": None,
-            }
-
-            config["batch_size"] = cfg.batch_size
-            config["local_epochs"] = cfg.local_epochs
-            config["num_samples"] = cfg.num_samples
-
-            log(INFO, f"Round {server_round} training config: batch_size={config['batch_size']}, local_epochs={config['local_epochs']}, num_samples={config['num_samples']}")
-
-            return config
-        
-        return fit_config
-    
     def get_fit_metrics_aggregation_fn():
         def fit_metrics_aggregation_fn(results: List[Tuple[int, Metrics]]) -> Metrics:
             # Initialize lists to store training losses
@@ -134,14 +106,18 @@ def main(cfg: DictConfig) -> None:
         server_model = create_MLP_model()
     
     server_model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
+
     
     # instantiate strategy according to config. Here we pass other arguments
     # that are only defined at run time.
     strategy = instantiate(
         cfg.strategy,
-        on_fit_config_fn=get_on_fit_config(),
         evaluate_fn=get_evaluate_fn(server_model),
         fit_metrics_aggregation_fn=get_fit_metrics_aggregation_fn(),
+        max_local_epochs=cfg.epochs_max,
+        batch_size = cfg.batch_size_default,
+        fraction_samples = cfg.fraction_samples_default,
+        use_RT=True 
     )
 
     # 5. Start Simulation
@@ -162,6 +138,12 @@ def main(cfg: DictConfig) -> None:
         ray_init_args=ray_init_args,
     )
 
+    # 6. Save your results
+    # Here you can save the `history` returned by the simulation and include
+    # also other buffers, statistics, info needed to be saved in order to later
+    # on generate the plots you provide in the README.md. You can for instance
+    # access elements that belong to the strategy for example:
+    # data = strategy.get_my_custom_data() -- assuming you have such method defined.
     # 6. Save your results
     # Experiment completed. Now we save the results and
     # generate plots using the `history`

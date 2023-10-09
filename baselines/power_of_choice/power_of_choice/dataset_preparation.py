@@ -544,7 +544,7 @@ def download_and_preprocess(cfg: DictConfig) -> None:
     x_test = x_test.astype("float32") / 255.0
 
     num_partitions = total_clients
-    concentration = cfg.alpha
+    concentration = float(cfg.alpha)
     seed = cfg.seed if cfg.seed is not None else 42
 
     # Create the partitions

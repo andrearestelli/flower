@@ -47,8 +47,8 @@ class FlwrClient(fl.client.NumPyClient):
         log(INFO, f"Training on fraction {fraction_samples} of the training set, batch size {batch_size}, and {epochs} epochs")
 
         self.model.set_weights(parameters)
-        self.model.fit(x_train_selected, y_train_selected, batch_size=batch_size, epochs=epochs, verbose=2)
-        return self.model.get_weights(), len(self.x_train), {}
+        history = self.model.fit(x_train_selected, y_train_selected, batch_size=batch_size, epochs=epochs, verbose=2)
+        return self.model.get_weights(), len(self.x_train), {"training_loss": history.history["loss"][-1]}
 
     def evaluate(self, parameters, config):
         self.model.set_weights(parameters)

@@ -6,7 +6,7 @@ extend or modify the functionality of an existing strategy.
 
 from logging import WARNING
 from typing import Callable, Dict, List, Optional, Tuple
-from flwr.common.typing import EvaluateIns, FitIns, MetricsAggregationFn, NDArrays, Parameters, Scalar
+from flwr.common.typing import EvaluateIns, FitIns, MetricsAggregationFn, NDArrays, Parameters, Scalar, GetPropertiesIns
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy.fedavg import WARNING_MIN_AVAILABLE_CLIENTS_TOO_LOW, FedAvg
@@ -40,6 +40,10 @@ class FedAvgWithDynamicSelection(FedAvg):
         evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
         decay_coefficient: float,
         initial_sampling_rate: int,
+        max_local_epochs: int = 5,
+        batch_size: int = 32,
+        fraction_samples: float = 1.0,
+        use_RT: bool = False
     ) -> None:
         """Federated Averaging strategy.
 
@@ -102,16 +106,15 @@ class FedAvgWithDynamicSelection(FedAvg):
         self.evaluate_metrics_aggregation_fn = evaluate_metrics_aggregation_fn
         self.decay_coefficient = decay_coefficient
         self.initial_sampling_rate = initial_sampling_rate
+        self.max_local_epochs = max_local_epochs
+        self.batch_size = batch_size
+        self.fraction_samples = fraction_samples
+        self.use_RT = use_RT
 
     def configure_fit(
         self, server_round: int, parameters: Parameters, client_manager: ClientManager
     ) -> List[Tuple[ClientProxy, FitIns]]:
         """Configure the next round of training."""
-        config = {}
-        if self.on_fit_config_fn is not None:
-            # Custom fit config function provided
-            config = self.on_fit_config_fn(server_round)
-        fit_ins = FitIns(parameters, config)
 
         # Compute sample rate c
         sample_rate = self.initial_sampling_rate / math.exp(self.decay_coefficient * server_round)
@@ -126,8 +129,53 @@ class FedAvgWithDynamicSelection(FedAvg):
             num_clients=sample_size
         )
 
+        # Create fit instructions for each client
+        fit_ins = []
+
+        if not self.use_RT:
+            # use standard on fit_config
+            config = {}
+            if self.on_fit_config_fn is not None:
+                # Custom fit config function provided
+                config = self.on_fit_config_fn(server_round)
+            fit_ins = [(client, FitIns(parameters, config)) for client in clients]
+        else:
+            # use RT optimizer to dynamically configure hyperparameters
+
+            ips_clients = []
+
+            # Retrieve IPS of sampled clients
+            for client in clients:
+                config = {}
+                propertiesRes = client.get_properties(GetPropertiesIns(config), None)
+                ips = propertiesRes.properties["ips"]
+                ips_clients.append((client, ips))
+
+            # Find the maximum IPS among those of the selected clients
+            max_ips = max(ips_clients, key=lambda x: x[1])[1]
+
+            for client, ips in ips_clients:
+                # Compute scaling factor
+                scale_factor = ips / max_ips
+
+                if(ips == max_ips):
+                    local_epochs = self.max_local_epochs
+                else:
+                    local_epochs = max(1, int(self.max_local_epochs * scale_factor))
+
+                config = {
+                    "local_epochs": local_epochs,
+                    "batch_size": self.batch_size,
+                    "fraction_samples": self.fraction_samples,
+                }
+
+                print(f"Client {client.cid} - IPS {ips} - Local epochs {local_epochs} - Fraction samples {self.fraction_samples}")
+
+                # Create fit instruction
+                fit_ins.append((client, FitIns(parameters, config)))
+
         # Return client/config pairs
-        return [(client, fit_ins) for client in clients]
+        return fit_ins
     
     def configure_evaluate(
         self, server_round: int, parameters: Parameters, client_manager: ClientManager

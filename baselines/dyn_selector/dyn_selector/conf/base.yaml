@@ -29,15 +29,15 @@ fraction_samples_varying: True # whether to vary fraction of samples
 comp_time: 30 # computation time in seconds for each client
 
 seed: 39
-alpha: 2
-is_cnn: False
+alpha: 0.6
+is_cnn: True
 
 client_resources:
   num_cpus: 1
   num_gpus: 0
 
 dataset:
-  dataset: "mnist"
+  dataset: "cifar10"
   num_classes: 10
 
 optimizer: "so"
@@ -48,7 +48,7 @@ strategy:
   min_evaluate_clients: 1
   min_available_clients: 1
   decay_coefficient: 0.1
-  initial_sampling_rate: 0.5
+  initial_sampling_rate: 0.2
   # rest of strategy config
 
 client:
@@ -57,4 +57,4 @@ client:
 
 hydra:
   run:
-    dir: outputs/${now:%Y-%m-%d}/${optimizer}_${dataset.dataset}_beta${strategy.decay_coefficient}
+    dir: outputs/${now:%Y-%m-%d}/${optimizer}_${dataset.dataset}_a${alpha}_beta${strategy.decay_coefficient}

@@ -28,8 +28,8 @@ fraction_samples_varying: True # whether to vary fraction of samples
 comp_time: 30 # computation time in seconds for each client
 
 seed: 39
-alpha: 2
-is_cnn: False
+alpha: 0.6
+is_cnn: True
 
 client_resources:
   num_cpus: 1
@@ -38,7 +38,7 @@ client_resources:
 optimizer: "so"
 
 dataset:
-  dataset: "mnist"
+  dataset: "cifar10"
 
 # variant of the strategy: "rand" for FedAvg strategy ,"base", "cpow" for cpow, "rpow" for rpow
 variant: "base"
@@ -46,8 +46,8 @@ b: 64
 
 strategy:
   _target_: power_of_choice.strategy.PowerOfChoice
-  d: 30
-  ck: 15
+  d: 20
+  ck: 10
 
 client:
   mean_ips: 100
