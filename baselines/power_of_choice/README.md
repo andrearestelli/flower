@@ -142,35 +142,9 @@ To run using FedAvg:
 python -m power_of_choice.main variant="rand" 
 ```
 
-To run all the experiments in Figure 4 of the paper, use the following commands:
-```bash
-# This will use FedAvg as strategy
-python -m power_of_choice.main variant="rand" 
+To run all the experiments in Figure 4 of the paper, [see the section below](#figure-4a-and-4b).
 
-# This will use base version of Power of Choice with d=6
-python -m power_of_choice.main strategy.d=6
-
-# This will use base version of Power of Choice with d=9
-python -m power_of_choice.main strategy.d=9
-
-# This will use base version of Power of Choice with d=12
-python -m power_of_choice.main strategy.d=12
-```
-
-To run all the experiments in Figure 6 of the paper, use the following commands:
-```bash
-# This will use FedAvg as strategy
-python -m power_of_choice.main variant="rand" 
-
-# This will use base version of Power of Choice with d=6
-python -m power_of_choice.main strategy.d=6
-
-# This will use base version of Power of Choice with d=9
-python -m power_of_choice.main strategy.d=9
-
-# This will use base version of Power of Choice with d=12
-python -m power_of_choice.main strategy.d=12
-```
+To run all the experiments in Figure 6 of the paper, [see the section below](#figure-6a-and-6b).
 
 ## Expected Results
 
@@ -237,14 +211,24 @@ python -m power_of_choice.main dataset.dataset="cifar10" variant="cpow" is_cnn=T
 python -m power_of_choice.main dataset.dataset="cifar10" variant="rpow" is_cnn=True strategy.d=60 strategy.ck=9
 ```
 
-The above commands would generate results by creating a directory under the following path `outputs/<date>/<dataset_name>_${variant}_d${strategy.d}_CK${strategy.ck}`, containing a `results.pkl` file that you can plot by using the following command:
+The above commands would generate results by creating a directory under the following path `outputs/<date>/<hour-minutes-seconds>/<dataset_name>_${variant}_d${strategy.d}_CK${strategy.ck}`, containing a `results.pkl` file that you can plot by using the following command:
 
 ```bash
 # This will plot a set of results in the same figure. 
 python -m power_of_choice.plot_from_pickle --metrics-type="paper_metrics" <paths_to_results>
 ```
 
-The resulting plots should look similar to the one below (reproducing Figure 6a of the paper).
+The resulting plots should look similar to those below.
 
+#### Figure 4a
+![](_static/Figure_4a.png)
+
+#### Figure 4b
+![](_static/Figure_4b.png)
+
+#### Figure 6a
 ![](_static/Figure_6a.png)
+
+#### Figure 6b
+![](_static/Figure_6b.png)
 
