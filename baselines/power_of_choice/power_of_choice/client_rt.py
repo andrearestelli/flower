@@ -147,7 +147,7 @@ def gen_client_fn(ips_mean, ips_var, num_clients, is_cnn: bool = False) -> Calla
         else:
             model = create_MLP_model()
 
-        model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
+        model.compile("sgd", "sparse_categorical_crossentropy", metrics=["accuracy"])
 
         ips = ips_dict[cid]
 

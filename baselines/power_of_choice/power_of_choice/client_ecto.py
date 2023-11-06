@@ -150,7 +150,7 @@ def gen_client_fn(ips_mean: int, ips_var: int, num_clients: int, varying_config:
         else:
             model = create_MLP_model()
         
-        model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
+        model.compile("sgd", "sparse_categorical_crossentropy", metrics=["accuracy"])
 
         config = config_dict[cid]
 
