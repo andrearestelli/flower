@@ -222,8 +222,18 @@ def plot_metrics_from_histories(
     suffix: Optional[str]
         Optional string to add at the end of the filename for the plot.
     """
-    # Create a figure with two subplots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(30, 15))
+    # Adjust the figure size as needed
+    fig_size = (17, 14)  
+
+    # Font and line sizes
+    font_size = 30  # Increase font size
+    line_width = 4  # Increase line width
+
+    # Apply moving average smoothing
+    window_size = 8
+
+    # Plot Test Accuracy
+    fig1, ax1 = plt.subplots(figsize=fig_size)
 
     for title, hist in title_and_histories:
         # Extract required metrics
@@ -236,8 +246,7 @@ def plot_metrics_from_histories(
         rounds_distributed, loss_values_distributed = zip(*training_losses_distributed)
         rounds_centralized, accuracy_values_centralized = zip(*accuracy_centralized)
 
-        # Apply moving average smoothing
-        window_size = 5
+        
         smoothed_loss = []
         smoothed_accuracy = []
 
@@ -251,46 +260,58 @@ def plot_metrics_from_histories(
             window = np.ones(actual_window_size) / actual_window_size
             smoothed_accuracy.append(np.convolve(accuracy_values_centralized[max(0, i-actual_window_size+1):i+1], window, 'valid')[0])
 
-        ax1.plot(rounds_centralized, smoothed_accuracy, label=f"{title}")
-        ax2.plot(rounds_distributed, smoothed_loss, label=f"{title}")
+        ax1.plot(rounds_centralized, smoothed_accuracy, label=f"{title}", linewidth=line_width)
 
-    ax1.set_xlabel("Communication round", fontsize=20)
-    ax1.set_ylabel("Test accuracy", fontsize=20)
-    ax1.set_ylim(0.1, 0.9)  # Set the y-axis limit
-
-    ax2.set_xlabel("Communication round", fontsize=20)
-    ax2.set_ylabel("Training loss", fontsize=20)
-
-    # Enlarge the legend and place it outside of the plot
-    ax1.legend(fontsize=18)
-    ax2.legend(fontsize=18)
-
-    # Add gridlines
+    # Configure accuracy plot
+    ax1.set_xlabel("Communication round", fontsize=font_size)
+    ax1.set_ylabel("Test accuracy", fontsize=font_size)
+    ax1.set_ylim(0.1, 0.6)
+    ax1.legend(fontsize=font_size+4)
     ax1.grid(True)
-    ax2.grid(True)
-
-    # Increase text size
-    ax1.tick_params(axis='both', which='major', labelsize=18)
-    ax2.tick_params(axis='both', which='major', labelsize=18)
-
-    # Amplify the main title size
-    fig.suptitle("MLP on FMNIST with alpha=2", fontsize=24)
-
-    # Add gridlines
-    ax1.grid(True)
-    ax2.grid(True)
-
-    # Increase text size
-    ax1.tick_params(axis='both', which='major', labelsize=14)
-    ax2.tick_params(axis='both', which='major', labelsize=14)
-
-    # Add a title to the figure
-    fig.suptitle("Metrics from Histories", fontsize=16)
-
-    # Adjust layout to avoid overlapping labels and titles
+    ax1.tick_params(axis='both', which='major', labelsize=font_size)
+    plt.title("CNN on CIFAR10 with alpha=0.6 | Test Accuracy", fontsize=font_size+12)
     plt.tight_layout()
+    plt.savefig(Path(save_plot_path) / Path(f"Test_Accuracy{suffix}.png"))
+    plt.close()
 
-    plt.savefig(Path(save_plot_path) / Path(f"Plot_metrics{suffix}.png"))
+    # Plot Training Loss
+    fig2, ax2 = plt.subplots(figsize=fig_size)
+    for title, hist in title_and_histories:
+        # Extract required metrics
+        training_losses_distributed = hist.metrics_distributed_fit[
+            "average_training_loss"
+        ]
+        accuracy_centralized = hist.metrics_centralized["accuracy"]
+
+        # Unpack rounds and loss values
+        rounds_distributed, loss_values_distributed = zip(*training_losses_distributed)
+        rounds_centralized, accuracy_values_centralized = zip(*accuracy_centralized)
+
+        # Apply moving average smoothing
+        smoothed_loss = []
+        smoothed_accuracy = []
+
+        for i in range(len(loss_values_distributed)):
+            actual_window_size = min(i + 1, window_size)
+            window = np.ones(actual_window_size) / actual_window_size
+            smoothed_loss.append(np.convolve(loss_values_distributed[max(0, i-actual_window_size+1):i+1], window, 'valid')[0])
+        
+        for i in range(len(accuracy_values_centralized)):
+            actual_window_size = min(i + 1, window_size)
+            window = np.ones(actual_window_size) / actual_window_size
+            smoothed_accuracy.append(np.convolve(accuracy_values_centralized[max(0, i-actual_window_size+1):i+1], window, 'valid')[0])
+
+        ax2.plot(rounds_distributed, smoothed_loss, label=f"{title}", linewidth=line_width)
+
+    # Configure loss plot
+    ax2.set_xlabel("Communication round", fontsize=font_size)
+    ax2.set_ylabel("Training loss", fontsize=font_size)
+    ax2.legend(fontsize=font_size+4)
+    ax2.grid(True)
+    ax2.tick_params(axis='both', which='major', labelsize=font_size)
+    plt.title("CNN on CIFAR10 with alpha=0.6 | Training Loss", fontsize=font_size+12)
+    plt.tight_layout()
+    plt.savefig(Path(save_plot_path) / Path(f"Training_Loss{suffix}.png"))
     plt.close()
 
 
@@ -310,8 +331,15 @@ def plot_variances_training_loss_from_history(
     suffix: Optional[str]
         Optional string to add at the end of the filename for the plot.
     """
-    # Create a figure
-    plt.figure()
+    # Adjust the figure size as needed
+    fig_size = (30, 20)
+
+    # Font and line sizes
+    font_size = 30  # Increase font size
+    line_width = 3  # Increase line width
+
+    # Plot Test Accuracy
+    fig1, ax1 = plt.subplots(figsize=fig_size)
 
     for title, hist in title_and_histories:
         # Extract required metrics
@@ -325,24 +353,27 @@ def plot_variances_training_loss_from_history(
         )
 
         # Plot losses_distributed
-        plt.plot(
+        ax1.plot(
             rounds_distributed,
             variance_training_loss_values_distributed,
             label=f"{title}",
+            linewidth=line_width
         )
 
-    plt.xlabel("Communication round")
-    plt.ylabel("Training loss variance")
-    plt.legend()
+    # Configure plot
+    ax1.set_xlabel("Communication round", fontsize=font_size)
+    ax1.set_ylabel("Training loss variance", fontsize=font_size)
+    ax1.legend(fontsize=font_size+4)
 
     # Add gridlines
-    plt.grid(True)
+    ax1.grid(True)
 
     # Increase text size
-    plt.tick_params(axis='both', which='major', labelsize=14)
+    ax1.tick_params(axis='both', which='major', labelsize=font_size)
 
     # Add a title to the figure
-    plt.title("Training Loss Variance from History", fontsize=16)
+    plt.title("MLP on MNIST with alpha=0.6 | Training Loss Variance", fontsize=font_size+12)
+    plt.tight_layout()
 
     plt.savefig(Path(save_plot_path) / Path(f"Plot_loss_variance{suffix}.png"))
     plt.close()
