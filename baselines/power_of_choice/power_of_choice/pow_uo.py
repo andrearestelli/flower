@@ -51,11 +51,12 @@ def main(cfg: DictConfig) -> None:
     # 3. Define your clients
     # Define a function that returns another function that will be used during
     # simulation to instantiate each individual client
-    client_fn = gen_client_fn((cfg.epochs_min, cfg.epochs_max), 
-                              (cfg.fraction_samples_min, cfg.fraction_samples_max), 
-                              (cfg.batch_size_min, cfg.batch_size_max), 
-                              cfg.num_clients, 
-                              cfg.is_cnn)
+    client_fn = gen_client_fn(cfg.client.mean_ips, cfg.client.var_ips,
+                            (cfg.epochs_min, cfg.epochs_max), 
+                            (cfg.fraction_samples_min, cfg.fraction_samples_max), 
+                            (cfg.batch_size_min, cfg.batch_size_max), 
+                            cfg.num_clients, 
+                            cfg.is_cnn)
 
     # 4. Define your strategy
     # pass all relevant argument (including the global dataset used after aggregation,
@@ -106,12 +107,16 @@ def main(cfg: DictConfig) -> None:
         def fit_metrics_aggregation_fn(results: List[Tuple[int, Metrics]]) -> Metrics:
             # Initialize lists to store training losses
             training_losses = []
+            estimated_times = []
 
             # Extract training losses and client counts from results
             for _, metrics in results:
                 if 'training_loss' in metrics:
                     training_loss = metrics['training_loss']
                     training_losses.append(training_loss)
+                if 'estimated_time' in metrics:
+                    estimated_time = metrics['estimated_time']
+                    estimated_times.append(estimated_time)
 
             # Calculate the variance and average of training loss
             variance_training_loss = np.var(training_losses)
@@ -120,7 +125,8 @@ def main(cfg: DictConfig) -> None:
             # Create the aggregated metrics dictionary
             aggregated_metrics = {
                 'variance_training_loss': variance_training_loss,
-                'average_training_loss': average_training_loss
+                'average_training_loss': average_training_loss,
+                'estimated_times': estimated_times
             }
 
             return aggregated_metrics

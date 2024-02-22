@@ -13,8 +13,8 @@ epochs_min: 1 # minimum number of epochs
 epochs_max: 5 # maximum number of epochs
 batch_size_min: 32 # minimum batch size
 batch_size_max: 128 # maximum batch size
-fraction_samples_min: 0.1 # minimum fraction of samples
-fraction_samples_max: 0.8 # maximum fraction of samples
+fraction_samples_min: 0.5 # minimum fraction of samples
+fraction_samples_max: 1.0 # maximum fraction of samples
 
 local_epochs_default: 2 # number of local epochs
 batch_size_default: 32 # batch size
@@ -25,11 +25,11 @@ local_epochs_varying: False # whether to vary local epochs
 batch_size_varying: False # whether to vary batch size
 fraction_samples_varying: True # whether to vary fraction of samples
 
-comp_time: 30 # computation time in seconds for each client
+comp_time: 5 # computation time in seconds for each client
 
 seed: 39
-alpha: 0.6
-is_cnn: True
+alpha: 2
+is_cnn: False
 
 client_resources:
   num_cpus: 1
@@ -38,7 +38,7 @@ client_resources:
 optimizer: "so"
 
 dataset:
-  dataset: "cifar10"
+  dataset: "mnist"
 
 # variant of the strategy: "rand" for FedAvg strategy ,"base", "cpow" for cpow, "rpow" for rpow
 variant: "base"
@@ -50,8 +50,8 @@ strategy:
   ck: 10
 
 client:
-  mean_ips: 100
-  var_ips: 50
+  mean_ips: 10
+  var_ips: 5
 
 hydra:
   run:

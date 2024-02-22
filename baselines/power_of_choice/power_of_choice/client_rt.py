@@ -61,6 +61,8 @@ class FlwrClient(fl.client.NumPyClient):
         x_train_selected = self.x_train
         y_train_selected = self.y_train
 
+        num_samples = len(self.x_train)
+
         # Randomly sample num_samples from the training set
         if fraction_samples is not None:
             num_samples = round(len(self.x_train) * fraction_samples)
@@ -68,10 +70,12 @@ class FlwrClient(fl.client.NumPyClient):
             x_train_selected = self.x_train[idx]
             y_train_selected = self.y_train[idx]
 
-        print(
-            f"""Client training on {len(x_train_selected)} samples, {epochs} epochs,
-            batch size {batch_size}, learning rate {learning_rate}"""
-        )
+        # Compute time metrics
+        local_iterations = (epochs * num_samples) // batch_size
+        estimated_time = local_iterations / self.ips
+
+        print(f"""Client training on {len(x_train_selected)} samples, {epochs} epochs, 
+              batch size {batch_size}, fraction samples {fraction_samples}, estimated time {estimated_time}""")
 
         # During training, update the learning rate as needed
         tf.keras.backend.set_value(self.model.optimizer.lr, learning_rate)
@@ -88,7 +92,7 @@ class FlwrClient(fl.client.NumPyClient):
         return (
             self.model.get_weights(),
             len(self.x_train),
-            {"training_loss": history.history["loss"][-1]},
+            {"training_loss": history.history["loss"][-1], "estimated_time": estimated_time},
         )
 
     def evaluate(self, parameters, config):

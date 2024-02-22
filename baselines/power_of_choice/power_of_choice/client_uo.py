@@ -16,13 +16,14 @@ import numpy as np
 import math
 
 class FlwrClient(fl.client.NumPyClient):
-    def __init__(self, model, x_train, y_train, epochs, fraction_samples, batch_size) -> None:
+    def __init__(self, model, x_train, y_train, ips, epochs, fraction_samples, batch_size) -> None:
         super().__init__()
         self.model = model
+        self.ips = ips
         self.epochs = epochs
         self.fraction_samples = fraction_samples
         self.batch_size = batch_size 
-        split_idx = math.floor(len(x_train) * 0.9)  # Use 10% of x_train for validation
+        split_idx = math.floor(len(x_train) * 0.95)  # Use 5% of x_train for validation
         self.x_train, self.y_train = x_train[:split_idx], y_train[:split_idx]
         self.x_val, self.y_val = x_train[split_idx:], y_train[split_idx:]
 
@@ -49,6 +50,8 @@ class FlwrClient(fl.client.NumPyClient):
         x_train_selected = self.x_train
         y_train_selected = self.y_train
 
+        num_samples = len(self.x_train)
+
         # Randomly sample num_samples from the training set
         if fraction_samples is not None:
             num_samples = round(len(self.x_train) * fraction_samples)
@@ -56,7 +59,12 @@ class FlwrClient(fl.client.NumPyClient):
             x_train_selected = self.x_train[idx]
             y_train_selected = self.y_train[idx]
 
-        print(f"Client training on {len(x_train_selected)} samples, {epochs} epochs, batch size {batch_size}, fraction samples {fraction_samples}")
+        # Compute time metrics
+        local_iterations = (epochs * num_samples) // batch_size
+        estimated_time = local_iterations / self.ips
+
+        print(f"""Client training on {len(x_train_selected)} samples, {epochs} epochs, 
+              batch size {batch_size}, fraction samples {fraction_samples}, estimated time {estimated_time}""")
 
         # During training, update the learning rate as needed
         tf.keras.backend.set_value(self.model.optimizer.lr, learning_rate)
@@ -64,7 +72,7 @@ class FlwrClient(fl.client.NumPyClient):
         self.model.set_weights(parameters)
 
         history = self.model.fit(x_train_selected, y_train_selected, batch_size=batch_size, epochs=epochs, verbose=2)
-        return self.model.get_weights(), len(self.x_train), {"training_loss": history.history['loss'][-1]}
+        return self.model.get_weights(), len(self.x_train), {"training_loss": history.history['loss'][-1], "estimated_time": estimated_time}
 
     def evaluate(self, parameters, config):
         self.model.set_weights(parameters)
@@ -88,7 +96,15 @@ class FlwrClient(fl.client.NumPyClient):
         return loss, len(self.x_val), {"accuracy": acc}
 
 
-def gen_client_fn(epochs: Tuple[int, int], fraction_samples: Tuple[int, int], batch_size: Tuple[int, int], num_clients: int, is_cnn: bool = False) -> Callable[[str], fl.client.Client]:
+def gen_client_fn(ips_mean: int, ips_var: int, epochs: Tuple[int, int], fraction_samples: Tuple[int, int], batch_size: Tuple[int, int], num_clients: int, is_cnn: bool = False) -> Callable[[str], fl.client.Client]:
+
+    # Generate num_clients random ips from uniform distribution
+    ips_min = ips_mean - ips_var
+    ips_max = ips_mean + ips_var
+    ips_dict = {}
+    for i in range(0, num_clients):
+        ips_dict.update({str(i): np.random.uniform(ips_min, ips_max)})
+
 
     # Generate epochs, fraction_samples, and batch_size for each client from a uniform distribution
     epochs_min, epochs_max = epochs
@@ -126,6 +142,8 @@ def gen_client_fn(epochs: Tuple[int, int], fraction_samples: Tuple[int, int], ba
         
         model.compile("sgd", "sparse_categorical_crossentropy", metrics=["accuracy"])
 
+        ips = ips_dict[cid]
+
         epochs = epochs_dict[cid]
         fraction_samples = fraction_samples_dict[cid]
         batch_size = batch_size_dict[cid]
@@ -134,6 +152,6 @@ def gen_client_fn(epochs: Tuple[int, int], fraction_samples: Tuple[int, int], ba
         (x_train_cid, y_train_cid) = load_dataset(cid, is_cnn)
 
         # Create and return client
-        return FlwrClient(model, x_train_cid, y_train_cid, epochs, fraction_samples, batch_size)
+        return FlwrClient(model, x_train_cid, y_train_cid, ips, epochs, fraction_samples, batch_size)
     
     return client_fn

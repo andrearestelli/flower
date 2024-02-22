@@ -108,7 +108,7 @@ def plot_dloss_from_history(
     plt.ylabel("Training loss")
     plt.legend()
 
-    plt.savefig(Path(save_plot_path) / Path(f"Plot_loss{suffix}.png"))
+    plt.savefig(Path(save_plot_path) / Path(f"Plot_loss{suffix}.eps"), format='eps', bbox_inches='tight')
     plt.close()
 
 
@@ -159,7 +159,7 @@ def plot_metric_from_history(
     # Adjust layout to avoid overlapping labels and titles
     plt.tight_layout()
 
-    plt.savefig(Path(save_plot_path) / Path(f"Plot_metrics{suffix}.png"))
+    plt.savefig(Path(save_plot_path) / Path(f"Plot_metrics{suffix}.eps"), format='eps', bbox_inches='tight')
     plt.close()
 
 
@@ -202,7 +202,7 @@ def plot_variance_training_loss_from_history(
     plt.ylabel("Training loss variance")
     plt.legend()
 
-    plt.savefig(Path(save_plot_path) / Path(f"Plot_loss_variance{suffix}.png"))
+    plt.savefig(Path(save_plot_path) / Path(f"Plot_loss_variance{suffix}.eps"), format='eps', bbox_inches='tight')
     plt.close()
 
 
@@ -227,10 +227,14 @@ def plot_metrics_from_histories(
 
     # Font and line sizes
     font_size = 30  # Increase font size
-    line_width = 4  # Increase line width
+    line_width = 3  # Increase line width
 
     # Apply moving average smoothing
-    window_size = 8
+    window_size = 7
+
+    model = "MLP"
+    dataset = "MNIST"
+    alpha = 0.6
 
     # Plot Test Accuracy
     fig1, ax1 = plt.subplots(figsize=fig_size)
@@ -265,13 +269,13 @@ def plot_metrics_from_histories(
     # Configure accuracy plot
     ax1.set_xlabel("Communication round", fontsize=font_size)
     ax1.set_ylabel("Test accuracy", fontsize=font_size)
-    ax1.set_ylim(0.1, 0.6)
+    ax1.set_ylim(0.1, 1.0)
     ax1.legend(fontsize=font_size+4)
     ax1.grid(True)
     ax1.tick_params(axis='both', which='major', labelsize=font_size)
-    plt.title("CNN on CIFAR10 with alpha=0.6 | Test Accuracy", fontsize=font_size+12)
+    plt.title(f"{model} on {dataset} with alpha={alpha} | Test Accuracy", fontsize=font_size+12)
     plt.tight_layout()
-    plt.savefig(Path(save_plot_path) / Path(f"Test_Accuracy{suffix}.png"))
+    plt.savefig(Path(save_plot_path) / Path(f"W{window_size}_{model}_a{alpha}_Test_accuracy{suffix}.eps"), format='eps', bbox_inches='tight')
     plt.close()
 
     # Plot Training Loss
@@ -309,9 +313,9 @@ def plot_metrics_from_histories(
     ax2.legend(fontsize=font_size+4)
     ax2.grid(True)
     ax2.tick_params(axis='both', which='major', labelsize=font_size)
-    plt.title("CNN on CIFAR10 with alpha=0.6 | Training Loss", fontsize=font_size+12)
+    plt.title(f"{model} on {dataset} with alpha={alpha} | Training Loss", fontsize=font_size+12)
     plt.tight_layout()
-    plt.savefig(Path(save_plot_path) / Path(f"Training_Loss{suffix}.png"))
+    plt.savefig(Path(save_plot_path) / Path(f"W{window_size}_{model}_a{alpha}_Training_loss{suffix}.eps"), format='eps', bbox_inches='tight')
     plt.close()
 
 
@@ -375,5 +379,68 @@ def plot_variances_training_loss_from_history(
     plt.title("MLP on MNIST with alpha=0.6 | Training Loss Variance", fontsize=font_size+12)
     plt.tight_layout()
 
-    plt.savefig(Path(save_plot_path) / Path(f"Plot_loss_variance{suffix}.png"))
+    plt.savefig(Path(save_plot_path) / Path(f"Plot_loss_variance{suffix}.eps"), format='eps', bbox_inches='tight')
+    plt.close()
+
+def plot_time_metrics(
+    title_and_histories: List[Tuple[str, History]],
+    save_plot_path: Path,
+    suffix: Optional[str] = "",
+) -> None:
+    """Plot time metrics from Flower server History.
+
+    Parameters
+    ----------
+    hist : History
+        List containing histories and corresponding titles.
+    save_plot_path : Path
+        Folder to save the plot to.
+    suffix: Optional[str]
+        Optional string to add at the end of the filename for the plot.
+    """
+    # Adjust the figure size as needed
+    fig_size = (30, 20)
+
+    # Font and line sizes
+    font_size = 30  # Increase font size
+    line_width = 3  # Increase line width
+
+    # Plot Test Accuracy
+    fig1, ax1 = plt.subplots(figsize=fig_size)
+
+    for title, hist in title_and_histories:
+        # Extract required metrics
+        estimated_times = hist.metrics_distributed_fit[
+            "estimated_times"
+        ]
+
+        # Unpack rounds and times values
+        rounds_distributed, estimated_times = zip(
+            *estimated_times
+        )
+
+        # Plot losses_distributed
+        # ax1.plot(
+        #     rounds_distributed,
+        #     variance_training_loss_values_distributed,
+        #     label=f"{title}",
+        #     linewidth=line_width
+        # )
+
+    # Configure plot
+    # ax1.set_xlabel("Communication round", fontsize=font_size)
+    # ax1.set_ylabel("Training loss variance", fontsize=font_size)
+    # ax1.legend(fontsize=font_size+4)
+
+    # # Add gridlines
+    # ax1.grid(True)
+
+    # # Increase text size
+    # ax1.tick_params(axis='both', which='major', labelsize=font_size)
+
+    # # Add a title to the figure
+    # plt.title("MLP on MNIST with alpha=0.6 | Training Loss Variance", fontsize=font_size+12)
+    # plt.tight_layout()
+
+    plt.savefig(Path(save_plot_path) / Path(f"Plot_loss_variance{suffix}.eps"), format='eps', bbox_inches='tight')
     plt.close()

@@ -16,11 +16,12 @@ import numpy as np
 import math
 
 class FlwrClient(fl.client.NumPyClient):
-    def __init__(self, model, x_train, y_train, config) -> None:
+    def __init__(self, model, x_train, y_train, ips, config) -> None:
         super().__init__()
         self.model = model
+        self.ips = ips
         self.config = config
-        split_idx = math.floor(len(x_train) * 0.9)  # Use 10% of x_train for validation
+        split_idx = math.floor(len(x_train) * 0.95)  # Use 5% of x_train for validation
         self.x_train, self.y_train = x_train[:split_idx], y_train[:split_idx]
         self.x_val, self.y_val = x_train[split_idx:], y_train[split_idx:]
 
@@ -49,6 +50,8 @@ class FlwrClient(fl.client.NumPyClient):
         x_train_selected = self.x_train
         y_train_selected = self.y_train
 
+        num_samples = len(self.x_train)
+
         # Randomly sample num_samples from the training set
         if fraction_samples is not None:
             num_samples = round(len(self.x_train) * fraction_samples)
@@ -56,7 +59,13 @@ class FlwrClient(fl.client.NumPyClient):
             x_train_selected = self.x_train[idx]
             y_train_selected = self.y_train[idx]
 
-        print(f"Client training on {len(x_train_selected)} samples, {epochs} epochs, batch size {batch_size}, learning rate {learning_rate}")
+        # Compute time metrics
+        local_iterations = (epochs * num_samples) // batch_size
+        estimated_time = local_iterations / self.ips
+
+        print(f"""Client training on {len(x_train_selected)} samples, {epochs} epochs, 
+              batch size {batch_size}, fraction samples {fraction_samples}, estimated time {estimated_time}""")
+
 
         # During training, update the learning rate as needed
         tf.keras.backend.set_value(self.model.optimizer.lr, learning_rate)
@@ -64,7 +73,7 @@ class FlwrClient(fl.client.NumPyClient):
         self.model.set_weights(parameters)
 
         history = self.model.fit(x_train_selected, y_train_selected, batch_size=batch_size, epochs=epochs, verbose=2)
-        return self.model.get_weights(), len(self.x_train), {"training_loss": history.history['loss'][-1]}
+        return self.model.get_weights(), len(self.x_train), {"training_loss": history.history['loss'][-1], "estimated_time": estimated_time}
 
     def evaluate(self, parameters, config):
         self.model.set_weights(parameters)
@@ -108,6 +117,8 @@ def gen_client_fn(ips_mean: int, ips_var: int, num_clients: int, varying_config:
     if varying_config["local_epochs"]:
         batch_size = default_config["batch_size"]
         fraction_samples = default_config["fraction_samples"]
+        (x_train_cid, _) = load_dataset(cid, is_cnn)
+        samples_per_client = len(x_train_cid)
         num_samples = round(samples_per_client * fraction_samples)
         for cid, local_iteration in local_iterations.items():
             local_epochs = max(1, int((local_iteration * batch_size) / num_samples))
@@ -120,6 +131,8 @@ def gen_client_fn(ips_mean: int, ips_var: int, num_clients: int, varying_config:
     elif varying_config["batch_size"]:
         local_epochs = default_config["local_epochs"]
         fraction_samples = default_config["fraction_samples"]
+        (x_train_cid, _) = load_dataset(cid, is_cnn)
+        samples_per_client = len(x_train_cid)
         num_samples = round(samples_per_client * fraction_samples)
         for cid, local_iteration in local_iterations.items():
             batch_size = max(1, int((num_samples * local_epochs) / local_iteration))
@@ -133,6 +146,8 @@ def gen_client_fn(ips_mean: int, ips_var: int, num_clients: int, varying_config:
         local_epochs = default_config["local_epochs"]
         batch_size = default_config["batch_size"]
         for cid, local_iteration in local_iterations.items():
+            (x_train_cid, _) = load_dataset(cid, is_cnn)
+            samples_per_client = len(x_train_cid)
             num_samples = max(1, int((local_iteration * batch_size) / local_epochs))
             fraction_samples = round(num_samples / samples_per_client, 2)
             fraction_samples = min(1.0, fraction_samples)
@@ -156,10 +171,12 @@ def gen_client_fn(ips_mean: int, ips_var: int, num_clients: int, varying_config:
 
         print(f"Client {cid} - Batch size {config['batch_size']} - Local epochs {config['local_epochs']}")
 
+        ips = ips_dict[cid]
+
         # Load data partition (divide MNIST into NUM_CLIENTS distinct partitions)
         (x_train_cid, y_train_cid) = load_dataset(cid, is_cnn)
 
         # Create and return client
-        return FlwrClient(model, x_train_cid, y_train_cid, config)
+        return FlwrClient(model, x_train_cid, y_train_cid, ips, config)
     
     return client_fn

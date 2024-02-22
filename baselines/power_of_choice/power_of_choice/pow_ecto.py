@@ -123,12 +123,16 @@ def main(cfg: DictConfig) -> None:
         def fit_metrics_aggregation_fn(results: List[Tuple[int, Metrics]]) -> Metrics:
             # Initialize lists to store training losses
             training_losses = []
+            estimated_times = []
 
             # Extract training losses and client counts from results
             for _, metrics in results:
                 if 'training_loss' in metrics:
                     training_loss = metrics['training_loss']
                     training_losses.append(training_loss)
+                if 'estimated_time' in metrics:
+                    estimated_time = metrics['estimated_time']
+                    estimated_times.append(estimated_time)
 
             # Calculate the variance and average of training loss
             variance_training_loss = np.var(training_losses)
@@ -137,7 +141,8 @@ def main(cfg: DictConfig) -> None:
             # Create the aggregated metrics dictionary
             aggregated_metrics = {
                 'variance_training_loss': variance_training_loss,
-                'average_training_loss': average_training_loss
+                'average_training_loss': average_training_loss,
+                'estimated_times': estimated_times
             }
 
             return aggregated_metrics

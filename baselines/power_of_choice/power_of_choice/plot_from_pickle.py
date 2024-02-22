@@ -10,6 +10,7 @@ from flwr.common.logger import log
 from power_of_choice.utils import (
     plot_metrics_from_histories,
     plot_variances_training_loss_from_history,
+    plot_time_metrics
 )
 
 
@@ -42,8 +43,10 @@ def plot_multiplot(metrics_type, paths):
     if metrics_type in ["paper_metrics"]:
         # Plot distributed losses using the provided function
         plot_metrics_from_histories(histories, save_plot_path)
-    else:
+    elif metrics_type in ["variance"]:
         plot_variances_training_loss_from_history(histories, save_plot_path)
+    else:
+        plot_time_metrics(histories, save_plot_path)
 
 
 def main():
@@ -52,7 +55,7 @@ def main():
     parser.add_argument(
         "--metrics-type",
         type=str,
-        choices=["paper_metrics", "variance"],
+        choices=["paper_metrics", "variance", "time"],
         help="Type of metrics to plot",
     )
     parser.add_argument(
